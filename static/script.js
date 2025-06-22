@@ -13,37 +13,57 @@ function detectMotion() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+const video = document.querySelector("video");
+const statusText = document.getElementById("status");
 
-  if (lastFrame) {
-    let diff = 0;
-    for (let i = 0; i < currentFrame.data.length; i += 4) {
-      diff += Math.abs(currentFrame.data[i] - lastFrame.data[i]);
-    }
-    if (diff > 1000000) {
-      motionStatus.innerText = "Motion Detected!";
-      motionStatus.style.color = "green";
-      logMotion();
-    } else {
-      motionStatus.innerText = "No Motion";
-      motionStatus.style.color = "red";
-    }
-  }
+let prevFrame = null;
 
-  lastFrame = currentFrame;
-  requestAnimationFrame(detectMotion);
-}
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then((stream) => {
+    video.srcObject = stream;
+    video.play();
 
-function logMotion() {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    setInterval(() => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      if (prevFrame) {
+        let diff = 0;
+        for (let i = 0; i < currentFrame.data.length; i += 4) {
+          diff += Math.abs(currentFrame.data[i] - prevFrame.data[i]);
+        }
+
+        if (diff > 1000000) {  // adjust threshold as needed
+          statusText.innerText = "Motion Detected!";
+          sendMotion();
+          sendSnapshot(canvas.toDataURL('image/jpeg'));
+        } else {
+          statusText.innerText = "No Motion";
+        }
+      }
+
+      prevFrame = currentFrame;
+    }, 1000);
+  });
+
+function sendMotion() {
   fetch("/log-motion", {
     method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: "Motion detected by client" })
-  }).then(res => res.json()).then(data => {
-    console.log("Logged:", data);
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "Motion Detected" }),
   });
 }
 
-video.addEventListener('play', () => {
-  detectMotion();
-});
+function sendSnapshot(base64Image) {
+  fetch("/save-snapshot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: base64Image }),
+  });
+}
+
