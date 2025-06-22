@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Motion Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Motion Detector</h1>
+  <video id="video" autoplay width="640" height="480"></video>
+  <p id="motion-status">Waiting for motion...</p>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
